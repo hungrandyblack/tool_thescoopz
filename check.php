@@ -1,8 +1,14 @@
 <?php
 header("Content-Type: application/json; charset=UTF-8");
 
-require 'vendor/autoload.php'; // Nếu dùng Guzzle
+require 'vendor/autoload.php'; // Composer autoload
+require 'database.php';
+use Illuminate\Database\Capsule\Manager as Capsule;
+$capsule = new Capsule;
 use GuzzleHttp\Client;
+
+
+
 
 // =================== LẤY URL ===================
 if (!isset($_POST['channel_url'])) {
@@ -51,6 +57,10 @@ $following = $followingNode ? (int) trim($followingNode->textContent) : 0;
 $followersNode = $xpath->query("//span[text()='Followers']/preceding-sibling::span[1]")->item(0);
 $followers = $followersNode ? (int) trim($followersNode->textContent) : 0;
 
+// name_channel
+$nameNode = $xpath->query("//h1[contains(@class,'font-extrabold')]")->item(0);
+$name_channel = $nameNode ? trim($nameNode->textContent) : '';
+
 // Tổng views tất cả video
 $totalViews = 0;
 $videoCount = 0;
@@ -69,21 +79,15 @@ foreach ($viewNodes as $div) {
     }
 }
 
-// =================== LƯU DATABASE ===================
-$mysqli = new mysqli("localhost", "root", "", "tool_thescoopz");
-if ($mysqli->connect_errno) {
-    echo json_encode(["error" => "Database error: " . $mysqli->connect_error]);
-    exit;
-}
-
-$stmt = $mysqli->prepare("
-    INSERT INTO checks (channel_url, followers, total_views, video_count, following)
-    VALUES (?, ?, ?, ?, ?)
-");
-$stmt->bind_param("siiii", $channelUrl, $followers, $totalViews, $view_count, $following);
-$stmt->execute();
-$stmt->close();
-$mysqli->close();
+// =================== LƯU DATABASE DÙNG ILLUMINATE ===================
+Capsule::table('checks')->insert([
+    'channel_url' => $channelUrl,
+    'followers' => $followers,
+    'total_views' => $totalViews,
+    'video_count' => $view_count,
+    'following' => $following,
+    'name_channel' => $name_channel
+]);
 
 // =================== TRẢ JSON ===================
 echo json_encode([
@@ -92,5 +96,6 @@ echo json_encode([
     "following" => $following,
     "view_count" => $view_count,
     "total_views" => $totalViews,
-    "video_count" => $videoCount
+    "video_count" => $videoCount,
+     'name_channel' => $name_channel
 ]);

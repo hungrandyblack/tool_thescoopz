@@ -57,6 +57,7 @@
             <p><b>Followers:</b> ${data.followers}</p>
             <p><b>Total Views:</b> ${data.total_views}</p>
             <p><b>Số video:</b> ${data.video_count}</p>
+            <p><b>Tên kênh:</b> ${data.name_channel}</p>
             <p class="text-green-600 font-semibold">Lưu vào lịch sử thành công!</p>
           `;
         }
@@ -89,6 +90,7 @@
                 <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Total Views</th>
                 <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Video Count</th>
                 <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Following</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Tên Kênh</th>
                 <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Thời gian</th>
               </tr>
             </thead>
@@ -99,11 +101,12 @@
           html += `
             <tr>
               <td class="px-4 py-2 text-sm">${idx + 1}</td>
-              <td class="px-4 py-2 text-sm text-blue-600 underline">${row.channel_url}</td>
-              <td class="px-4 py-2 text-sm">${row.followers}</td>
-              <td class="px-4 py-2 text-sm">${row.total_views}</td>
-              <td class="px-4 py-2 text-sm">${row.video_count}</td>
-              <td class="px-4 py-2 text-sm">${row.following}</td>
+              <td class="px-4 py-2 text-sm text-blue-600 underline">${row.channel_url ? row.channel_url : ""}</td>
+              <td class="px-4 py-2 text-sm">${row.followers ? row.followers: 0}</td>
+              <td class="px-4 py-2 text-sm">${row.total_views ? row.total_views : 0}</td>
+              <td class="px-4 py-2 text-sm">${row.video_count  ? row.video_count: 0}</td>
+              <td class="px-4 py-2 text-sm">${row.following ? row.following: 0}</td>
+              <td class="px-4 py-2 text-sm">${row.name_channel ? row.name_channel: ''}</td>
               <td class="px-4 py-2 text-sm">${row.checked_at}</td>
             </tr>
           `;
