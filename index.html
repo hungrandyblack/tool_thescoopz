@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kiểm tra Scoopz Channel</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6 text-center">Kiểm tra thông tin kênh Scoopz</h1>
+
+    <!-- Form kiểm tra -->
+    <form id="form-check" class="bg-white p-6 rounded-lg shadow-md flex flex-col sm:flex-row gap-4 items-center mb-6">
+      <input type="text" id="channel_url" name="channel_url"
+        placeholder="https://thescoopz.com/@..." required
+        class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button type="submit" 
+        class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">Kiểm tra</button>
+    </form>
+
+    <!-- Kết quả -->
+    <div id="result" class="bg-white p-4 rounded-lg shadow-md mb-6 min-h-[80px]"></div>
+
+    <!-- Lịch sử -->
+    <h2 class="text-2xl font-semibold mb-3">Lịch sử kiểm tra</h2>
+    <div id="history" class="overflow-x-auto bg-white p-4 rounded-lg shadow-md"></div>
+  </div>
+
+  <script>
+    // --- Gửi AJAX kiểm tra ---
+    document.getElementById('form-check').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const url = document.getElementById('channel_url').value.trim();
+
+      // Hiển thị loading
+      document.getElementById('result').innerHTML = `<p class="text-gray-500">Đang kiểm tra...</p>`;
+
+      const formData = new FormData();
+      formData.append('channel_url', url);
+
+      try {
+        const resp = await fetch('check.php', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await resp.json();
+
+        // Hiển thị kết quả ngay dưới form
+        if (data.error) {
+          document.getElementById('result').innerHTML = `<p class="text-red-500">${data.error}</p>`;
+        } else {
+          document.getElementById('result').innerHTML = `
+            <p><b>URL:</b> ${data.channel_url}</p>
+            <p><b>Followers:</b> ${data.followers}</p>
+            <p><b>Total Views:</b> ${data.total_views}</p>
+            <p><b>Số video:</b> ${data.video_count}</p>
+            <p class="text-green-600 font-semibold">Lưu vào lịch sử thành công!</p>
+          `;
+        }
+
+        // Reload bảng lịch sử
+        loadHistory();
+      } catch (err) {
+        document.getElementById('result').innerHTML = `<p class="text-red-500">Lỗi server hoặc JSON không hợp lệ</p>`;
+      }
+    });
+
+    // --- Load lịch sử ---
+    async function loadHistory() {
+      try {
+        const resp = await fetch('history.php');
+        const data = await resp.json();
+
+        if (!data.length) {
+          document.getElementById('history').innerHTML = `<p class="text-gray-500">Chưa có dữ liệu lịch sử</p>`;
+          return;
+        }
+
+        let html = `
+          <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">#</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">URL</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Followers</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Total Views</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Video Count</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Following</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Thời gian</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+        `;
+
+        data.forEach((row, idx) => {
+          html += `
+            <tr>
+              <td class="px-4 py-2 text-sm">${idx + 1}</td>
+              <td class="px-4 py-2 text-sm text-blue-600 underline">${row.channel_url}</td>
+              <td class="px-4 py-2 text-sm">${row.followers}</td>
+              <td class="px-4 py-2 text-sm">${row.total_views}</td>
+              <td class="px-4 py-2 text-sm">${row.video_count}</td>
+              <td class="px-4 py-2 text-sm">${row.following}</td>
+              <td class="px-4 py-2 text-sm">${row.checked_at}</td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+        document.getElementById('history').innerHTML = html;
+      } catch (err) {
+        document.getElementById('history').innerHTML = `<p class="text-red-500">Không thể tải lịch sử</p>`;
+      }
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>
