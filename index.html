@@ -4,13 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <title>Kiểm tra Scoopz Channel</title>
-  <!-- Tailwind CSS CDN -->
   <script src="tailwindcss.js"></script>
 </head>
 
 <body class="bg-gray-100 text-gray-800 min-h-screen">
-
-  <div class="mx-auto p-6">
+  <div class="mx-auto p-6 max-w-6xl">
     <h1 class="text-3xl font-bold mb-6 text-center">Kiểm tra thông tin kênh Scoopz</h1>
 
     <!-- Form kiểm tra -->
@@ -34,14 +32,28 @@
 
       <a href="kiem_tra_tong.php" class="px-3 py-2 bg-gray-500 text-white rounded ml-2">kiểm tra tổng</a>
     </div>
+    <!-- Search -->
+    <div class="flex gap-2 mb-4">
+      <input type="text" id="search_keyword" placeholder="Tìm theo URL hoặc tên kênh"
+        class="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button id="btn-search" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">Search</button>
+    </div>
 
     <!-- Lịch sử -->
-    <h2 class="text-2xl font-semibold mb-3">Lịch sử kiểm tra</h2>
-    <div id="history" class="overflow-x-auto bg-white p-4 rounded-lg shadow-md"></div>
+    <div id="history" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto"></div>
+    <div id="pagination" class="mt-3 flex justify-center gap-2"></div>
   </div>
+
   <script src="jquery.min.js"></script>
   <script>
-    // --- Giữ nguyên hàm check(url) cũ của bạn ---
+     // Lấy giá trị sort từ URL (vd: ?sort=asc hoặc ?sort=desc)
+    function getSortFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('sort');
+      if (s === 'asc' || s === 'desc') return s;
+      return 'desc'; // mặc định
+    }
+    // --- Hàm check ---
     async function check(url) {
       const formData = new FormData();
       formData.append('channel_url', url);
@@ -54,51 +66,43 @@
 
         const data = await resp.json();
 
-        // Hiển thị kết quả ngay dưới form
         if (data.error) {
-          document.getElementById('result').innerHTML = `<p class="text-red-500">${data.error}</p>`;
+          $('#result').html(`<p class="text-red-500">${data.error}</p>`);
         } else {
-          document.getElementById('result').innerHTML = `
-          <p><b>URL:</b> <a class="text-blue-600 underline hover:text-blue-800" target="_blank" href="${data.channel_url}">${data.channel_url}</a></p>
-          <p><b>Followers:</b> ${data.followers}</p>
-          <p><b>Total Views:</b> ${data.total_views}</p>
-          <p><b>Số video:</b> ${data.video_count}</p>
-          <p><b>Tên kênh:</b> ${data.name_channel}</p>
-          <p class="text-green-600 font-semibold">Lưu vào lịch sử thành công!</p>
-        `;
+          $('#result').html(`
+            <p><b>URL:</b> <a class="text-blue-600 underline" target="_blank" href="${data.channel_url}">${data.channel_url}</a></p>
+            <p><b>Followers:</b> ${data.followers}</p>
+            <p><b>Total Views:</b> ${data.total_views}</p>
+            <p><b>Số video:</b> ${data.video_count}</p>
+            <p><b>Tên kênh:</b> ${data.name_channel}</p>
+            <p class="text-green-600 font-semibold">Lưu vào lịch sử thành công!</p>
+          `);
         }
-
-        // Reload bảng lịch sử
-        loadHistory();
+        loadHistory(currentPage, $('#search_keyword').val());
       } catch (err) {
-        document.getElementById('result').innerHTML = `<p class="text-red-500">Lỗi server hoặc JSON không hợp lệ</p>`;
+        $('#result').html(`<p class="text-red-500">Lỗi server hoặc JSON không hợp lệ</p>`);
       }
     }
-  </script>
 
-  <script>
-    // Lấy giá trị sort từ URL (vd: ?sort=asc hoặc ?sort=desc)
-    function getSortFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const s = params.get('sort');
-      if (s === 'asc' || s === 'desc') return s;
-      return 'desc'; // mặc định
-    }
+    let currentPage = 1;
+    let perPage = 10;
 
-    // Load history, nhận vào sort (asc|desc)
-    async function loadHistory(sort = 'desc') {
+    async function loadHistory(page = 1, keyword = '', sort = 'desc') {
+      currentPage = page;
+      console.log("sort:", sort)
+      $('#history').html('<p class="text-gray-500 text-center py-3">Đang tải...</p>');
+
       try {
-        document.getElementById('history').innerHTML = `<td colspan="9" class="text-center py-3"><p class="text-gray-500">Đang kiểm tra...</p></td>`
-        const resp = await fetch('history.php?sort=' + encodeURIComponent(sort));
+        const resp = await fetch(`history.php?page=${page}&per_page=${perPage}&sort=${sort? sort :'desc'}&search=${encodeURIComponent(keyword)}`);
         const data = await resp.json();
 
-        if (!data || !data.length) {
-          document.getElementById('history').innerHTML = `<p class="text-gray-500">Chưa có dữ liệu lịch sử</p>`;
+        if (!data.items || !data.items.length) {
+          $('#history').html('<p class="text-gray-500 text-center py-3">Không có dữ liệu</p>');
+          $('#pagination').html('');
           return;
         }
 
-        let html = `
-        <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
+        let html = `<table class="min-w-full border border-gray-200 divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
               <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">#</th>
@@ -106,39 +110,63 @@
               <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Followers</th>
               <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Total Views</th>
               <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Video Count</th>
-              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Following</th>
               <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Tên Kênh</th>
               <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Thời gian</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-      `;
+          <tbody class="bg-white divide-y divide-gray-200">`;
 
-        data.forEach((row, idx) => {
+        data.items.forEach((row, idx) => {
           html += `
-          <tr>
-            <td class="px-4 py-2 text-sm">${idx + 1}</td>
-            <td class="px-4 py-2 text-sm text-blue-600 underline channel_url_td">${row.channel_url ? `<a href="${row.channel_url}" target="_blank">${row.channel_url}</a>` : ""}</td>
-            <td class="px-4 py-2 text-sm">${row.followers ? row.followers : 0}</td>
-            <td class="px-4 py-2 text-sm">${row.total_views ? row.total_views : 0}</td>
-            <td class="px-4 py-2 text-sm">${row.video_count ? row.video_count : 0}</td>
-            <td class="px-4 py-2 text-sm">${row.following ? row.following : 0}</td>
-            <td class="px-4 py-2 text-sm">${row.name_channel ? row.name_channel : ''}</td>
-            <td class="px-4 py-2 text-sm">${row.checked_at}</td>
-          
-          </tr>
-        `;
+            <tr>
+              <td class="px-4 py-2 text-sm">${row.id}</td>
+              <td class="px-4 py-2 text-sm text-blue-600 underline"><a href="${row.channel_url}" target="_blank">${row.channel_url}</a></td>
+              <td class="px-4 py-2 text-sm">${row.followers || 0}</td>
+              <td class="px-4 py-2 text-sm">${row.total_views || 0}</td>
+              <td class="px-4 py-2 text-sm">${row.video_count || 0}</td>
+              <td class="px-4 py-2 text-sm">${row.name_channel || ''}</td>
+              <td class="px-4 py-2 text-sm">${row.checked_at}</td>
+            </tr>`;
         });
 
-        html += `</tbody></table>`;
-        document.getElementById('history').innerHTML = html;
+        html += '</tbody></table>';
+        $('#history').html(html);
 
-        // (Không cần gán .button-load ở đây vì dùng delegated handler phía dưới)
+        // Phân trang
+        let totalPages = Math.ceil(data.total / perPage);
+        let pagHtml = '';
+        for (let i = 1; i <= totalPages; i++) {
+          pagHtml += `<button class="px-3 py-1 rounded ${i === page ? 'bg-blue-500 text-white' : 'bg-gray-200'}" data-page="${i}">${i}</button>`;
+        }
+        $('#pagination').html(pagHtml);
+
       } catch (err) {
         console.error(err);
-        document.getElementById('history').innerHTML = `<p class="text-red-500">Không thể tải lịch sử</p>`;
+        $('#history').html('<p class="text-red-500 text-center">Lỗi tải dữ liệu</p>');
       }
     }
+
+    // Event
+    $('#btn-check').on('click', function () {
+      const url = $('#channel_url').val().trim();
+      if (!url) return;
+      $('#result').html('<p class="text-gray-500">Đang kiểm tra...</p>');
+      check(url);
+    });
+
+    $('#btn-search').on('click', function () {
+      loadHistory(1, $('#search_keyword').val());
+    });
+
+    $(document).on('click', '#pagination button', function () {
+      const page = parseInt($(this).data('page'));
+      loadHistory(page, $('#search_keyword').val());
+    });
+
+    // Load page đầu
+    $(function () {
+      loadHistory(currentPage, $('#search_keyword').val(), 'desc');
+    });
 
     // Khi người dùng bấm link sort (hai nút ở trên), không reload mà gọi loadHistory
     $(document).on('click', 'a[data-sort]', function (e) {
@@ -152,7 +180,7 @@
       $('a[data-sort]').removeClass('bg-blue-700').addClass('bg-gray-500');
       $(this).removeClass('bg-gray-500').addClass('bg-blue-700');
 
-      loadHistory(sort);
+      loadHistory(currentPage, $('#search_keyword').val(),sort);
     });
 
     // delegated click cho nút Kiểm tra trong bảng (sinh sau)
@@ -164,7 +192,7 @@
       // update nút active
       $('a[data-sort]').removeClass('bg-blue-700').addClass('bg-gray-500');
       $(`a[data-sort="${s}"]`).removeClass('bg-gray-500').addClass('bg-blue-700');
-      loadHistory(s);
+      loadHistory(currentPage, $('#search_keyword').val(),s);
     });
 
     // Khi load page lần đầu: bật nút active và load history theo param
@@ -174,7 +202,7 @@
       $('a[data-sort]').removeClass('bg-blue-700').addClass('bg-gray-500');
       $(`a[data-sort="${initialSort}"]`).removeClass('bg-gray-500').addClass('bg-blue-700');
 
-      loadHistory(initialSort);
+      loadHistory(currentPage, $('#search_keyword').val(),initialSort);
     });
 
     $('#btn-check').on('click', function () {
@@ -185,7 +213,5 @@
       check(url);
     });
   </script>
-
 </body>
-
 </html>
