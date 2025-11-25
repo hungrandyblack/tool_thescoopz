@@ -3,8 +3,11 @@ header("Content-Type: application/json; charset=UTF-8");
 
 require 'vendor/autoload.php'; // Composer autoload
 require 'database.php';
+
 use Illuminate\Database\Capsule\Manager as Capsule;
+
 $capsule = new Capsule;
+
 use GuzzleHttp\Client;
 
 
@@ -78,16 +81,29 @@ foreach ($viewNodes as $div) {
         $videoCount++;
     }
 }
-
+$channelObject = Capsule::table('checks')->where('channel_url', $channelUrl)->first();
+if ($channelObject) {
+    Capsule::table('checks')
+        ->where('channel_url', $channelUrl)
+        ->update([
+            'followers'    => $followers,
+            'total_views'  => $totalViews,
+            'video_count'  => $view_count,
+            'following'    => $following,
+            'name_channel' => $name_channel
+        ]);
+} else {
+    Capsule::table('checks')->insert([
+        'channel_url'   => $channelUrl,
+        'followers'     => $followers,
+        'total_views'   => $totalViews,
+        'video_count'   => $view_count,
+        'following'     => $following,
+        'name_channel'  => $name_channel
+    ]);
+}
 // =================== LƯU DATABASE DÙNG ILLUMINATE ===================
-Capsule::table('checks')->insert([
-    'channel_url' => $channelUrl,
-    'followers' => $followers,
-    'total_views' => $totalViews,
-    'video_count' => $view_count,
-    'following' => $following,
-    'name_channel' => $name_channel
-]);
+
 
 // =================== TRẢ JSON ===================
 echo json_encode([
@@ -97,5 +113,5 @@ echo json_encode([
     "view_count" => $view_count,
     "total_views" => $totalViews,
     "video_count" => $videoCount,
-     'name_channel' => $name_channel
+    'name_channel' => $name_channel
 ]);
