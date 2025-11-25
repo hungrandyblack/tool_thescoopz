@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Kiểm tra Scoopz Channel</title>
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwindcss.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen">
 
@@ -16,110 +16,185 @@
       <input type="text" id="channel_url" name="channel_url"
         placeholder="https://thescoopz.com/@..." required
         class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-      <button type="submit" 
+      <button type="button" id="btn-check"
         class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">Kiểm tra</button>
     </form>
 
     <!-- Kết quả -->
     <div id="result" class="bg-white p-4 rounded-lg shadow-md mb-6 min-h-[80px]"></div>
+    <div class="mb-3">
+  <a href="?sort=desc" data-sort="desc" class="px-3 py-2 bg-blue-700 text-white rounded">
+    View cao nhất
+  </a>
+
+  <a href="?sort=asc" data-sort="asc" class="px-3 py-2 bg-gray-500 text-white rounded ml-2">
+    View thấp nhất
+  </a>
+</div>
 
     <!-- Lịch sử -->
     <h2 class="text-2xl font-semibold mb-3">Lịch sử kiểm tra</h2>
     <div id="history" class="overflow-x-auto bg-white p-4 rounded-lg shadow-md"></div>
   </div>
-
+<script src="jquery.min.js"></script>
   <script>
-    // --- Gửi AJAX kiểm tra ---
-    document.getElementById('form-check').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const url = document.getElementById('channel_url').value.trim();
+  // --- Giữ nguyên hàm check(url) cũ của bạn ---
+  async function check(url){
+    const formData = new FormData();
+    formData.append('channel_url', url);
 
-      // Hiển thị loading
-      document.getElementById('result').innerHTML = `<p class="text-gray-500">Đang kiểm tra...</p>`;
+    try {
+      const resp = await fetch('check.php', {
+        method: 'POST',
+        body: formData
+      });
 
-      const formData = new FormData();
-      formData.append('channel_url', url);
+      const data = await resp.json();
 
-      try {
-        const resp = await fetch('check.php', {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await resp.json();
-
-        // Hiển thị kết quả ngay dưới form
-        if (data.error) {
-          document.getElementById('result').innerHTML = `<p class="text-red-500">${data.error}</p>`;
-        } else {
-          document.getElementById('result').innerHTML = `
-            <p><b>URL:</b> <a class="text-blue-600 underline hover:text-blue-800" href="${data.channel_url}">${data.channel_url}</a></p>
-            <p><b>Followers:</b> ${data.followers}</p>
-            <p><b>Total Views:</b> ${data.total_views}</p>
-            <p><b>Số video:</b> ${data.video_count}</p>
-            <p><b>Tên kênh:</b> ${data.name_channel}</p>
-            <p class="text-green-600 font-semibold">Lưu vào lịch sử thành công!</p>
-          `;
-        }
-
-        // Reload bảng lịch sử
-        loadHistory();
-      } catch (err) {
-        document.getElementById('result').innerHTML = `<p class="text-red-500">Lỗi server hoặc JSON không hợp lệ</p>`;
-      }
-    });
-
-    // --- Load lịch sử ---
-    async function loadHistory() {
-      try {
-        const resp = await fetch('history.php');
-        const data = await resp.json();
-
-        if (!data.length) {
-          document.getElementById('history').innerHTML = `<p class="text-gray-500">Chưa có dữ liệu lịch sử</p>`;
-          return;
-        }
-
-        let html = `
-          <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">#</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">URL</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Followers</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Total Views</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Video Count</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Following</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Tên Kênh</th>
-                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Thời gian</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+      // Hiển thị kết quả ngay dưới form
+      if (data.error) {
+        document.getElementById('result').innerHTML = `<p class="text-red-500">${data.error}</p>`;
+      } else {
+        document.getElementById('result').innerHTML = `
+          <p><b>URL:</b> <a class="text-blue-600 underline hover:text-blue-800" href="${data.channel_url}">${data.channel_url}</a></p>
+          <p><b>Followers:</b> ${data.followers}</p>
+          <p><b>Total Views:</b> ${data.total_views}</p>
+          <p><b>Số video:</b> ${data.video_count}</p>
+          <p><b>Tên kênh:</b> ${data.name_channel}</p>
+          <p class="text-green-600 font-semibold">Lưu vào lịch sử thành công!</p>
         `;
-
-        data.forEach((row, idx) => {
-          html += `
-            <tr>
-              <td class="px-4 py-2 text-sm">${idx + 1}</td>
-              <td class="px-4 py-2 text-sm text-blue-600 underline">${row.channel_url ? `<a href="${row.channel_url}">${row.channel_url}</a>` : ""}</td>
-              <td class="px-4 py-2 text-sm">${row.followers ? row.followers: 0}</td>
-              <td class="px-4 py-2 text-sm">${row.total_views ? row.total_views : 0}</td>
-              <td class="px-4 py-2 text-sm">${row.video_count  ? row.video_count: 0}</td>
-              <td class="px-4 py-2 text-sm">${row.following ? row.following: 0}</td>
-              <td class="px-4 py-2 text-sm">${row.name_channel ? row.name_channel: ''}</td>
-              <td class="px-4 py-2 text-sm">${row.checked_at}</td>
-            </tr>
-          `;
-        });
-
-        html += `</tbody></table>`;
-        document.getElementById('history').innerHTML = html;
-      } catch (err) {
-        document.getElementById('history').innerHTML = `<p class="text-red-500">Không thể tải lịch sử</p>`;
       }
-    }
 
-    loadHistory();
-  </script>
+      // Reload bảng lịch sử
+      loadHistory();
+    } catch (err) {
+      document.getElementById('result').innerHTML = `<p class="text-red-500">Lỗi server hoặc JSON không hợp lệ</p>`;
+    }
+  }
+</script>
+
+<script>
+  // Lấy giá trị sort từ URL (vd: ?sort=asc hoặc ?sort=desc)
+  function getSortFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get('sort');
+    if (s === 'asc' || s === 'desc') return s;
+    return 'desc'; // mặc định
+  }
+
+  // Load history, nhận vào sort (asc|desc)
+  async function loadHistory(sort = 'desc') {
+    try {
+      document.getElementById('history').innerHTML = `<td colspan="9" class="text-center py-3"><p class="text-gray-500">Đang kiểm tra...</p></td>`
+      const resp = await fetch('history.php?sort=' + encodeURIComponent(sort));
+      const data = await resp.json();
+
+      if (!data || !data.length) {
+        document.getElementById('history').innerHTML = `<p class="text-gray-500">Chưa có dữ liệu lịch sử</p>`;
+        return;
+      }
+
+      let html = `
+        <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">#</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">URL</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Followers</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Total Views</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Video Count</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Following</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Tên Kênh</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Thời gian</th>
+              <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Hành động</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+      `;
+
+      data.forEach((row, idx) => {
+        html += `
+          <tr>
+            <td class="px-4 py-2 text-sm">${idx + 1}</td>
+            <td class="px-4 py-2 text-sm text-blue-600 underline channel_url_td">${row.channel_url ? `<a href="${row.channel_url}">${row.channel_url}</a>` : ""}</td>
+            <td class="px-4 py-2 text-sm">${row.followers ? row.followers: 0}</td>
+            <td class="px-4 py-2 text-sm">${row.total_views ? row.total_views : 0}</td>
+            <td class="px-4 py-2 text-sm">${row.video_count  ? row.video_count: 0}</td>
+            <td class="px-4 py-2 text-sm">${row.following ? row.following: 0}</td>
+            <td class="px-4 py-2 text-sm">${row.name_channel ? row.name_channel: ''}</td>
+            <td class="px-4 py-2 text-sm">${row.checked_at}</td>
+            <td class="px-4 py-2 text-sm">
+                <button type="button" 
+                class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition button-load">Kiểm tra</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('history').innerHTML = html;
+
+      // (Không cần gán .button-load ở đây vì dùng delegated handler phía dưới)
+    } catch (err) {
+      console.error(err);
+      document.getElementById('history').innerHTML = `<p class="text-red-500">Không thể tải lịch sử</p>`;
+    }
+  }
+
+  // Khi người dùng bấm link sort (hai nút ở trên), không reload mà gọi loadHistory
+  $(document).on('click', 'a[data-sort]', function(e) {
+    e.preventDefault();
+    const sort = $(this).data('sort'); // 'asc' hoặc 'desc'
+    // cập nhật url (không reload)
+    const newUrl = window.location.pathname + '?sort=' + encodeURIComponent(sort);
+    history.pushState({}, '', newUrl);
+
+    // cập nhật UI active (nếu muốn)
+    $('a[data-sort]').removeClass('bg-blue-700').addClass('bg-gray-500');
+    $(this).removeClass('bg-gray-500').addClass('bg-blue-700');
+
+    loadHistory(sort);
+  });
+
+  // delegated click cho nút Kiểm tra trong bảng (sinh sau)
+  $(document).on("click", ".button-load", function () {
+    const tr = $(this).closest("tr");
+    const url = tr.find(".channel_url_td a").text().trim();
+
+    if (url) {
+      // thay dòng hiện tại bằng loading row (colspan=9)
+      tr.html(`<td colspan="9" class="text-center py-3"><p class="text-gray-500">Đang kiểm tra...</p></td>`);
+      check(url);
+    }
+  });
+
+  // Khi back/forward browser, tải lại bảng theo param sort hiện tại
+  window.addEventListener('popstate', function() {
+    const s = getSortFromUrl();
+    // update nút active
+    $('a[data-sort]').removeClass('bg-blue-700').addClass('bg-gray-500');
+    $(`a[data-sort="${s}"]`).removeClass('bg-gray-500').addClass('bg-blue-700');
+    loadHistory(s);
+  });
+
+  // Khi load page lần đầu: bật nút active và load history theo param
+  $(function() {
+    const initialSort = getSortFromUrl();
+    // set active button style (bạn có thể đổi class tuỳ tailwind)
+    $('a[data-sort]').removeClass('bg-blue-700').addClass('bg-gray-500');
+    $(`a[data-sort="${initialSort}"]`).removeClass('bg-gray-500').addClass('bg-blue-700');
+
+    loadHistory(initialSort);
+  });
+
+  $('#btn-check').on('click', function() {
+    const url = $('#channel_url').val().trim();
+    if (!url) return;
+
+    $('#result').html('<p class="text-gray-500">Đang kiểm tra...</p>');
+    check(url);
+});
+</script>
+
 </body>
 </html>
