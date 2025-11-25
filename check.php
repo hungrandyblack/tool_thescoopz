@@ -66,7 +66,6 @@ $name_channel = $nameNode ? trim($nameNode->textContent) : '';
 
 // Tổng views tất cả video
 $totalViews = 0;
-$videoCount = 0;
 
 $viewNodes = $xpath->query("//div[contains(@class,'flex') and contains(@class,'items-center') and contains(@class,'gap-1')]");
 foreach ($viewNodes as $div) {
@@ -76,9 +75,14 @@ foreach ($viewNodes as $div) {
 
     if (strpos($src, "card-play.svg") !== false) {
         $text = trim($div->textContent);
-        $num = (int) str_replace([",", "."], "", $text);
+        if (stripos($text, 'K') !== false) {
+                $num = floatval(str_replace('K', '', $text)) * 1000;
+            } elseif (stripos($text, 'M') !== false) {
+                $num = floatval(str_replace('M', '', $text)) * 1000000;
+            } else {
+                $num = (int) str_replace([','], '', $text);
+            }
         $totalViews += $num;
-        $videoCount++;
     }
 }
 $channelObject = Capsule::table('checks')->where('channel_url', $channelUrl)->first();
@@ -112,6 +116,6 @@ echo json_encode([
     "following" => $following,
     "view_count" => $view_count,
     "total_views" => $totalViews,
-    "video_count" => $videoCount,
+    "video_count" => $view_count,
     'name_channel' => $name_channel
 ]);
