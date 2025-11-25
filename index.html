@@ -53,7 +53,7 @@
           document.getElementById('result').innerHTML = `<p class="text-red-500">${data.error}</p>`;
         } else {
           document.getElementById('result').innerHTML = `
-            <p><b>URL:</b> ${data.channel_url}</p>
+            <p><b>URL:</b> <a class="text-blue-600 underline hover:text-blue-800" href="${data.channel_url}">${data.channel_url}</a></p>
             <p><b>Followers:</b> ${data.followers}</p>
             <p><b>Total Views:</b> ${data.total_views}</p>
             <p><b>Số video:</b> ${data.video_count}</p>
@@ -101,7 +101,7 @@
           html += `
             <tr>
               <td class="px-4 py-2 text-sm">${idx + 1}</td>
-              <td class="px-4 py-2 text-sm text-blue-600 underline">${row.channel_url ? row.channel_url : ""}</td>
+              <td class="px-4 py-2 text-sm text-blue-600 underline">${row.channel_url ? `<a href="${row.channel_url}">${row.channel_url}</a>` : ""}</td>
               <td class="px-4 py-2 text-sm">${row.followers ? row.followers: 0}</td>
               <td class="px-4 py-2 text-sm">${row.total_views ? row.total_views : 0}</td>
               <td class="px-4 py-2 text-sm">${row.video_count  ? row.video_count: 0}</td>
