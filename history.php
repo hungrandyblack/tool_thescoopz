@@ -6,7 +6,7 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 // --- Lấy param ---
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$per_page = isset($_GET['per_page']) ? max(1, intval($_GET['per_page'])) : 10;
+$per_page = isset($_GET['per_page']) ? max(1, intval($_GET['per_page'])) : 50;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'desc';
 if (!in_array($sort, ['asc', 'desc'])) $sort = 'desc';
