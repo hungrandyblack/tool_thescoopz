@@ -6,7 +6,17 @@
   <title>Kiểm tra Scoopz Channel</title>
   <script src="tailwindcss.js"></script>
 </head>
-
+<style>
+  /* HTML: <div class="loader"></div> */
+.loader {
+  width: 60px;
+  aspect-ratio: 4;
+  background: radial-gradient(circle closest-side,#000 90%,#0000) 0/calc(100%/3) 100% space;
+  clip-path: inset(0 100% 0 0);
+  animation: l1 1s steps(4) infinite;
+}
+@keyframes l1 {to{clip-path: inset(0 -34% 0 0)}}
+</style>
 <body class="bg-gray-100 text-gray-800 min-h-screen">
   <div class="mx-auto p-6 max-w-6xl">
     <h1 class="text-3xl font-bold mb-6 text-center">Kiểm tra thông tin kênh Scoopz</h1>
@@ -30,7 +40,9 @@
         View thấp nhất
       </a>
 
-      <a href="kiem_tra_tong.php" class="px-3 py-2 bg-gray-500 text-white rounded ml-2">kiểm tra tổng</a>
+     <button id="kiem-tra-tong" class="px-3 py-2 bg-gray-500 text-white rounded ml-2">
+    Kiểm tra tổng
+</button>
     </div>
     <!-- Search -->
     <div class="flex gap-2 mb-4">
@@ -43,8 +55,81 @@
     <div id="history" class="bg-white p-4 rounded-lg shadow-md overflow-x-auto"></div>
     <div id="pagination" class="mt-3 flex justify-center gap-2"></div>
   </div>
+  <!-- Modal -->
+<div id="queueModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h2 class="text-xl font-bold mb-4">Trạng thái xử lý</h2>
+        <div class="loader"></div>
+        <div class="mb-2">Đang chạy: <span id="runningCount">0</span></div>
+        <div class="mb-2">Thành công: <span id="successCount">0</span></div>
+        <div class="mb-2">Thất bại: <span id="errorCount">0</span></div>
 
+        <button id="closeModal" class="mt-4 px-4 py-2 bg-red-500 text-white rounded">
+            Đóng
+        </button>
+    </div>
+</div>
   <script src="jquery.min.js"></script>
+  <script>
+let polling = null;
+let batchID = null;
+$('#kiem-tra-tong').on('click', function () {
+
+    $('#queueModal').removeClass('hidden');
+
+    $.ajax({
+        url: 'kiem_tra_tong.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+            
+            // Nếu file trả JSON gồm {dang_chay: xx}
+            if (res.total !== undefined) {
+                $('#runningCount').text(res.total);
+            }
+            batchID = res.batch_id;   // lưu batch cho lần này
+            console.log("Batch ID:", batchID);
+
+            console.log("Queue started:", res);
+
+            // bắt đầu polling 5s
+            polling = setInterval(checkQueueStatus, 5000);
+        }
+    });
+});
+
+
+function checkQueueStatus() {
+    $.ajax({
+        url: 'queue_status.php',
+        type: 'GET',
+        data: { batch_id: batchID },
+        dataType: 'json',
+        success: function(data) {
+
+            $('#runningCount').text(data.running);
+            $('#successCount').text(data.success);
+            $('#errorCount').text(data.error);
+
+            // ⛔ Nếu hết job đang chạy → dừng polling
+            if (data.running === 0) {
+              clearInterval(polling);
+              polling = null;
+              $(".loader").hide();
+              console.log("Queue finished.");
+            }
+        }
+    });
+}
+
+
+$('#closeModal').on('click', function () {
+    $('#queueModal').addClass('hidden');
+
+    if (polling) clearInterval(polling);
+});
+
+</script>
   <script>
      // Lấy giá trị sort từ URL (vd: ?sort=asc hoặc ?sort=desc)
     function getSortFromUrl() {
